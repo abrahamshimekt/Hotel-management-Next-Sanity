@@ -8,14 +8,19 @@ import { LiaFireExtinguisherSolid } from "react-icons/lia";
 import { AiOutlineMedicineBox } from "react-icons/ai";
 import { GiSmokeBomb } from "react-icons/gi";
 import BookRoomCTA from "@/components/BookRoomCTA";
-import { SetStateAction, useState } from "react";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import axios from "axios";
+import { getStripe } from "@/libs/stripe";
 
 const RoomDetails = (props: { params: { slug: string } }) => {
   const {
     params: { slug },
   } = props;
-  const [checkinDate,setCheckinDate] = useState<Date | null>(null);
-  const [checkout,setCheckoutDate] = useState<Date | null>(null);
+  const [checkinDate, setCheckinDate] = useState<Date | null>(null);
+  const [checkoutDate, setCheckoutDate] = useState<Date | null>(null);
+  const [adults, setAdults] = useState(1);
+  const [numberOfChildren, setNumberOfChildren] = useState(0);
 
   const fetchRoom = async () => getRoom(slug);
   const { data: room, error, isLoading } = useSWR("/api/room", fetchRoom);
@@ -24,14 +29,58 @@ const RoomDetails = (props: { params: { slug: string } }) => {
     throw new Error("cannot fetch data");
   if (!room) return <LoadingSpinner />;
 
-  const calculateMinCheckoutDate = ()=>{
-    if(checkinDate){
+  const calculateMinCheckoutDate = () => {
+    if (checkinDate) {
       const nextDay = new Date(checkinDate);
       nextDay.setDate(nextDay.getDate() + 1);
       return nextDay;
     }
     return null;
-  } 
+  };
+
+  const calcNumOfDays = () => {
+    if (!checkinDate || !checkoutDate) return;
+    const timeDiff = checkoutDate.getTime() - checkinDate.getTime();
+    const numberOfDays = Math.ceil(timeDiff / (24 * 60 * 60 * 1000));
+    return numberOfDays;
+  };
+
+  const handleBookNow = async () => {
+    if (!checkinDate || !checkoutDate)
+      return toast.error("please provide checkin/checkout dates");
+    if (checkinDate > checkoutDate)
+      return toast.error("please provide a valid checkin date");
+    const numberOfDays = calcNumOfDays();
+    const hotelRoomSlug = room.slug.current;
+
+    // stripe
+    const stripe = await getStripe();
+    try {
+      const { data: stripeSession } = await axios.post("/api/stripe", {
+        checkinDate,
+        checkoutDate,
+        adults,
+        numberOfChildren,
+        numberOfDays,
+        hotelRoomSlug,
+      });
+
+      if(stripe){
+        const result = await stripe.redirectToCheckout({
+          sessionId:stripeSession.id,
+
+        });
+        console.log(">>>>>>>>>>>>>>>>>>>",result);
+        if(result.error){
+          toast.error('payment failed');
+        }
+      }
+
+    } catch (error) {
+      console.log(error);
+      toast.error('error occurred');
+    }
+  };
 
   return (
     <div>
@@ -80,55 +129,59 @@ const RoomDetails = (props: { params: { slug: string } }) => {
                 <h2 className="font-bold text-3xl">Safety And Hygiene</h2>
                 <div className="grid grid-cols-2">
                   <div className="flex items-center my-1 md:my-0">
-                      <MdOutlineCleaningServices/>
-                      <p className="ml-2 md:text-base text-xs">Daily Cleaning</p>
-
+                    <MdOutlineCleaningServices />
+                    <p className="ml-2 md:text-base text-xs">Daily Cleaning</p>
                   </div>
                   <div className="flex items-center my-1 md:my-0">
-                      <LiaFireExtinguisherSolid/>
-                      <p className="ml-2 md:text-base text-xs">Fire Extinguishers</p>
-
+                    <LiaFireExtinguisherSolid />
+                    <p className="ml-2 md:text-base text-xs">
+                      Fire Extinguishers
+                    </p>
                   </div>
                   <div className="flex items-center my-1 md:my-0">
-                      <AiOutlineMedicineBox/>
-                      <p className="ml-2 md:text-base text-xs">Disinfections and sterilizations</p>
-
+                    <AiOutlineMedicineBox />
+                    <p className="ml-2 md:text-base text-xs">
+                      Disinfections and sterilizations
+                    </p>
                   </div>
                   <div className="flex items-center my-1 md:my-0">
-                      <GiSmokeBomb/>
-                      <p className="ml-2 md:text-base text-xs">Smoke Detecters</p>
-
+                    <GiSmokeBomb />
+                    <p className="ml-2 md:text-base text-xs">Smoke Detecters</p>
                   </div>
-
                 </div>
-
               </div>
               {/* Reviews */}
 
-
               <div>
-                  <div className="shadow dark:shadow-white rounded-lg p-6">
-                    <div className="items-center mb-4">
-                      <p className="md:text-lg font-semibold">
-                        Customer Reviews
-
-                      </p>
-                      <div className="grid  grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* reviews */}
-
-                      </div>
-
+                <div className="shadow dark:shadow-white rounded-lg p-6">
+                  <div className="items-center mb-4">
+                    <p className="md:text-lg font-semibold">Customer Reviews</p>
+                    <div className="grid  grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* reviews */}
                     </div>
-
                   </div>
-              </div> 
-
+                </div>
+              </div>
             </div>
-
           </div>
 
           <div className="md:col-span-4 rounded-xl shadow-lg dark:shadow dark:shadow-white sticky top-10 h-fit overflow-auto">
-            <BookRoomCTA price={room.price} discount={room.discount} specialNote={room.specialNote} checkinDate={checkinDate} setCheckinDate={setCheckinDate} checkoutDate={checkout} setCheckoutDate={setCheckoutDate } calculateMinCheckoutDate={calculateMinCheckoutDate } />
+            <BookRoomCTA
+              price={room.price}
+              discount={room.discount}
+              specialNote={room.specialNote}
+              checkinDate={checkinDate}
+              setCheckinDate={setCheckinDate}
+              checkoutDate={checkoutDate}
+              setCheckoutDate={setCheckoutDate}
+              calculateMinCheckoutDate={calculateMinCheckoutDate}
+              adults={adults}
+              numberOfChildren={numberOfChildren}
+              setAdults={setAdults}
+              setNumberOfChildren={setNumberOfChildren}
+              isBooked={room.isBooked}
+              handleBookNow={handleBookNow}
+            />
           </div>
         </div>
       </div>

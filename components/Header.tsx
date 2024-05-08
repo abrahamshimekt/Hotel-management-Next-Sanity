@@ -35,7 +35,7 @@ const Header: FC = () => {
               (< FaUserCircle className="cursor-pointer" />)
                 }
             </Link>
-            ):<Link href="/web/auth">
+            ):<Link href="/auth">
             <FaUserCircle className="cursor-pointer" />
           </Link>
             }

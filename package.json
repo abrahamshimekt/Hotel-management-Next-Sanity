@@ -11,6 +11,8 @@
   "dependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.5.1",
     "@sanity/vision": "^3.36.1",
+    "@stripe/stripe-js": "^3.4.0",
+    "axios": "^1.6.8",
     "dotenv": "^16.4.5",
     "next": "14.1.4",
     "next-auth": "^4.24.7",
@@ -22,6 +24,7 @@
     "react-hot-toast": "^2.4.1",
     "react-icons": "^5.0.1",
     "sanity": "^3.36.4",
+    "stripe": "^15.5.0",
     "styled-components": "^6.1.8",
     "swr": "^2.2.5"
   },

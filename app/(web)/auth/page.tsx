@@ -5,7 +5,6 @@ import { FcGoogle } from "react-icons/fc";
 import {signUp} from 'next-auth-sanity/client';
 import {signIn, useSession} from 'next-auth/react';
 import toast from "react-hot-toast";
-import { Session } from "inspector";
 import { useRouter } from "next/navigation";
 const defaultFormData = {
   name: "",
